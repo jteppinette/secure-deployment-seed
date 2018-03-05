@@ -1,0 +1,19 @@
+---
+
+- name: Generate Consul ACL Token
+  uri:
+    url: http://localhost:8500/v1/acl/create
+    method: PUT
+    headers:
+      X-Consul-Token: "{{ hostvars[groups.consul[0]].consul_acl_master_token }}"
+    body:
+      Name: "vault - service token"
+      Type: client
+      Rules: "{{ {'node': {inventory_hostname: {'policy': 'write'}}, 'service': {'vault': {'policy': 'write'}}, 'key': {'vault/': {'policy': 'write'}}, 'session': {inventory_hostname: {'policy': 'write'}}}|to_json }}"
+    body_format: json
+    status_code: 200
+    return_content: yes
+  register: vault_consul_acl_token_task
+- set_fact:
+    vault_consul_acl_token: "{{ vault_consul_acl_token_task.json.ID }}"
+- debug: var=vault_consul_acl_token

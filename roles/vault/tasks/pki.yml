@@ -1,0 +1,75 @@
+---
+
+- name: Mount PKI
+  uri:
+    url: http://localhost:8200/v1/sys/mounts/pki
+    method: POST
+    headers:
+      X-Vault-Token: "{{ vault_token }}"
+    body:
+      type: pki
+      config:
+        max_lease_ttl: "{{ vault_pki.max_lease_ttl|default(vault_year) }}"
+    status_code: 204
+    body_format: json
+  run_once: yes
+  when: vault_mounts["pki/"] is not defined
+
+- name: Register CA
+  uri:
+    url: http://localhost:8200/v1/pki/ca/pem
+    return_content: yes
+    status_code: [200, 204]
+  register: vault_ca_task
+  run_once: yes
+- set_fact:
+    vault_ca: "{{ vault_ca_task.content }}"
+  when: vault_ca_task|success and vault_ca_task.content != ""
+
+- name: Generate CA
+  uri:
+    url: http://localhost:8200/v1/pki/root/generate/internal
+    method: POST
+    headers:
+      X-Vault-Token: "{{ vault_token }}"
+    body:
+      common_name: "{{ vault_pki.ca.common_name|default('CA') }}"
+      ttl: "{{ vault_pki.ca.ttl|default(vault_year) }}"
+      key_bits: "{{ vault_pki.ca.key_bits|default(vault_key_bits) }}"
+      exclude_cn_from_sans: true
+    status_code: 200
+    body_format: json
+    return_content: yes
+  register: vault_generate_ca_task
+  run_once: yes
+  when: vault_ca is not defined
+- set_fact:
+    vault_ca: "{{ vault_generate_ca_task.json.data.certificate }}"
+  when: not vault_generate_ca_task|skipped and vault_generate_ca_task|success
+
+- name: Write CA
+  local_action:
+    module: copy
+    content: "{{ vault_ca }}"
+    dest: pki/vault/root.crt
+  run_once: yes
+  become: no
+
+- name: Create/Update Roles
+  uri:
+    url: http://localhost:8200/v1/pki/roles/{{ item.name }}
+    method: POST
+    headers:
+      X-Vault-Token: "{{ vault_token }}"
+    body:
+      max_ttl: "{{ item.max_ttl|default('1h') }}"
+      key_bits: "{{ item.key_bits|default(vault_key_bits) }}"
+      allowed_domains: "{{ item.allowed_domains|default('') }}"
+      allow_subdomains: "{{ item.allow_subdomains|default(false) }}"
+      allow_bare_domains: "{{ item.allow_bare_domains|default(false) }}"
+      server_flag: "{{ item.server_flag|default(false) }}"
+      client_flag: "{{ item.client_flag|default(false) }}"
+    body_format: json
+    status_code: 204
+  run_once: yes
+  with_items: "{{ vault_pki.roles }}"

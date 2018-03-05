@@ -1,0 +1,23 @@
+---
+
+- import_tasks: user.yml
+- import_tasks: install.yml
+- import_tasks: capabilities.yml
+- import_tasks: systemd.yml
+- import_tasks: consul.yml
+- import_tasks: configuration.yml
+- import_tasks: tls.yml
+- import_tasks: initialize.yml
+- import_tasks: mounts.yml
+
+- import_tasks: policies.yml
+  when: vault_policies is defined
+
+- import_tasks: approle.yml
+  when: vault_approle is defined
+
+- import_tasks: pki.yml
+  when: vault_pki is defined
+
+- import_tasks: database.yml
+  when: vault_database is defined

@@ -1,0 +1,4 @@
+---
+
+unbound_conf_dir: /etc/unbound
+unbound_log_dir: /var/log/unbound

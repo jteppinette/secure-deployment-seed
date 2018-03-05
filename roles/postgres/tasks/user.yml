@@ -1,0 +1,12 @@
+---
+
+- name: Add Database Users
+  postgresql_user:
+    db: "{{ item.db|default(None) }}"
+    name: "{{ item.name }}"
+    password: "{{ item.password|default(None) }}"
+    role_attr_flags: "{{ item.role_attr_flags|default(None) }}"
+    encrypted: "{{ item.password is defined }}"
+  become_user: postgres
+  become: yes
+  with_items: "{{ postgres_users }}"

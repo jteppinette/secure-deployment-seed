@@ -1,0 +1,11 @@
+---
+
+- name: Template SystemD Unit File
+  template:
+    src: vault.service
+    dest: /lib/systemd/system/vault.service
+
+- name: Enable Service
+  service:
+    name: vault
+    enabled: yes

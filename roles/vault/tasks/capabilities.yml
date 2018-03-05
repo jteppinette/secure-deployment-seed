@@ -1,0 +1,6 @@
+---
+
+- name: Add IPC Local Capability
+  capabilities:
+    path: "{{ vault_bin_dir }}/vault"
+    capability: cap_ipc_lock=+ep

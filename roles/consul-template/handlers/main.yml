@@ -1,0 +1,9 @@
+---
+
+- name: restart consul template
+  service:
+    name: consul-template
+    state: restarted
+
+- name: update ca trust
+  command: /usr/bin/update-ca-trust

@@ -1,0 +1,30 @@
+---
+
+- name: Create PKI Directory
+  file:
+    path: "{{ consul_pki_dir }}/private"
+    state: directory
+    owner: consul
+    mode: 0700
+
+- name: Copy Certificate and Key Files
+  copy:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: consul
+    mode: 0400
+  with_items:
+    - src: pki/consul/{{ inventory_hostname }}.crt
+      dest: "{{ consul_pki_dir }}/"
+    - src: pki/consul/{{ inventory_hostname }}.key
+      dest: "{{ consul_pki_dir }}/private/"
+  notify: restart consul
+
+- name: Copy Root CA Certificate
+  copy:
+    src: pki/ca/root.crt
+    dest: "{{ consul_ca_dir }}/"
+    mode: 0644
+  notify:
+    - update ca trust
+    - restart consul

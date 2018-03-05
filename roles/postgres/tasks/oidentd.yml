@@ -1,0 +1,12 @@
+---
+
+- name: Install OIdentD
+  yum:
+    name: oidentd
+    state: present
+
+- name: Enable & Start OIdentD
+  service:
+    name: oidentd
+    state: started
+    enabled: yes

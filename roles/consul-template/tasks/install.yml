@@ -1,0 +1,35 @@
+---
+
+- name: Install Packages
+  yum:
+    name: "{{ item }}"
+    state: present
+  with_items: [unzip]
+
+- name: Register Consul Template Binary Exists
+  stat:
+    path: "{{ consul_template_bin_dir }}/consul-template"
+  register: consul_template_binary_exists_task
+- set_fact:
+    consul_template_binary_exists: "{{ consul_template_binary_exists_task.stat.exists }}"
+
+- name: Download Consul Template
+  get_url:
+    url: https://releases.hashicorp.com/consul-template/{{ consul_template_version }}/consul-template_{{ consul_template_version }}_linux_amd64.zip
+    dest: "{{ consul_template_tmp_dir }}/consul-template.zip"
+    checksum: sha256:{{ consul_template_checksum }}
+    mode: 0640
+  when: not consul_template_binary_exists
+
+- name: Unzip Consul Template
+  unarchive:
+    src: "{{ consul_template_tmp_dir }}/consul-template.zip"
+    dest: "{{ consul_template_bin_dir }}"
+    remote_src: yes
+    mode: 500
+  when: not consul_template_binary_exists
+
+- name: Cleanup Consul Template Tmp
+  file:
+    path: "{{ consul_template_tmp_dir }}/consul-template.zip"
+    state: absent

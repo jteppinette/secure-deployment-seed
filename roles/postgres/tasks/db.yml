@@ -1,0 +1,8 @@
+---
+
+- name: Add Databases
+  postgresql_db:
+    db: "{{ item }}"
+  become_user: postgres
+  become: yes
+  with_items: "{{ postgres_databases }}"

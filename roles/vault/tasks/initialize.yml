@@ -1,0 +1,55 @@
+---
+
+- meta: flush_handlers
+
+- name: Register Initialization Status
+  uri:
+    url: http://127.0.0.1:8200/v1/sys/init
+    return_content: yes
+    status_code: 200
+  register: vault_init_status_task
+- set_fact:
+    vault_initialized: "{{ vault_init_status_task.json.initialized }}"
+  when: vault_init_status_task|success
+- debug: var=vault_initialized
+
+- name: Initialize Vault
+  uri:
+    url: http://127.0.0.1:8200/v1/sys/init
+    method: PUT
+    body:
+      secret_shares: 1
+      secret_threshold: 1
+    status_code: 200
+    body_format: json
+    return_content: yes
+  register: vault_init_task
+  run_once: yes
+  when: not vault_initialized
+- set_fact:
+    vault_key: "{{ vault_init_task.json.keys_base64[0] }}"
+    vault_token: "{{ vault_init_task.json.root_token }}"
+  when: not vault_init_task|skipped and vault_init_task|success
+- debug: var=vault_key
+- debug: var=vault_token
+
+- name: Register Seal Status
+  uri:
+    url: http://127.0.0.1:8200/v1/sys/seal-status
+    status_code: 200
+    return_content: yes
+  register: vault_seal_status_task
+- set_fact:
+    vault_sealed: "{{ vault_seal_status_task.json.sealed }}"
+  when: vault_seal_status_task|success
+- debug: var=vault_sealed
+
+- name: Unseal Vault
+  uri:
+    url: http://127.0.0.1:8200/v1/sys/unseal
+    method: PUT
+    body:
+      key: "{{ vault_key }}"
+    status_code: 200
+    body_format: json
+  when: vault_sealed and vault_key is defined

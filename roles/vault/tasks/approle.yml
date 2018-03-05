@@ -1,0 +1,86 @@
+---
+
+- name: Register Auth Backends
+  uri:
+    url: http://localhost:8200/v1/sys/auth
+    headers:
+      X-Vault-Token: "{{ vault_token }}"
+    status_code: 200
+    return_content: yes
+  register: vault_auth_backends_task
+- set_fact:
+    vault_auth_backends: "{{ vault_auth_backends_task.json }}"
+
+- name: Enable AppRole Authentication
+  uri:
+    url: http://localhost:8200/v1/sys/auth/approle
+    method: POST
+    headers:
+      X-Vault-Token: "{{ vault_token }}"
+    body:
+      type: approle
+    body_format: json
+    status_code: 204
+  run_once: yes
+  when: vault_auth_backends["approle/"] is not defined
+
+- name: Tune AppRole Authentication
+  uri:
+    url: http://localhost:8200/v1/sys/auth/approle/tune
+    method: POST
+    headers:
+      X-Vault-Token: "{{ vault_token }}"
+    body:
+      max_lease_ttl: "{{ vault_year }}"
+      default_lease_ttl: "{{ vault_year }}"
+    body_format: json
+    status_code: 204
+  run_once: yes
+
+- name: Create/Update Roles
+  uri:
+    url: http://localhost:8200/v1/auth/approle/role/{{ item.name }}
+    method: POST
+    headers:
+      X-Vault-Token: "{{ vault_token }}"
+    body:
+      bound_cidr_list: "{{ item.bound_cidr_list|default('') }}"
+      secret_id_num_uses: "{{ item.secret_id_num_uses|default(1) }}"
+      secret_id_ttl: "{{ item.secret_id_ttl|default('10m') }}"
+      policies: "{{ item.policies }}"
+      token_max_ttl: "{{ item.token_max_ttl|default(vault_year) }}"
+      period: "{{ item.period|default('1h') }}"
+    body_format: json
+    status_code: 204
+  run_once: yes
+  with_items: "{{ vault_approle.roles }}"
+
+- name: Register AppRole IDs
+  uri:
+    url: http://localhost:8200/v1/auth/approle/role/{{ item.name }}/role-id
+    headers:
+      X-Vault-Token: "{{ vault_token }}"
+    return_content: yes
+  register: vault_approle_ids_task
+  run_once: yes
+  with_items: "{{ vault_approle.roles }}"
+- set_fact:
+    vault_approle_ids: "{{ {item.item.name: item.json.data.role_id}|combine(vault_approle_ids|default({})) }}"
+  with_items: "{{ vault_approle_ids_task.results }}"
+- debug: var=vault_approle_ids
+
+- name: Generate AppRole Secrets
+  uri:
+    url: http://localhost:8200/v1/auth/approle/role/{{ item.name }}/secret-id
+    method: POST
+    status_code: 200
+    headers:
+      X-Vault-Token: "{{ vault_token }}"
+    return_content: yes
+  run_once: yes
+  register: vault_approle_secrets_task
+  with_items: "{{ vault_approle.roles }}"
+- set_fact:
+    vault_approle_secrets: "{{ {item.item.name: item.json.data.secret_id}|combine(vault_approle_secrets|default({})) }}"
+  with_items: "{{ vault_approle_secrets_task.results }}"
+- debug: var=vault_approle_secrets

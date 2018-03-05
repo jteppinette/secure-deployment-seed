@@ -1,0 +1,10 @@
+---
+
+- name: Template Consul Service Definition
+  template:
+    src: service.json
+    dest: "{{ consul_conf_dir }}/postgres.json"
+    mode: 0400
+    owner: consul
+  notify:
+    - reload consul

@@ -1,0 +1,103 @@
+---
+
+- import_playbook: generate-pki.yml
+
+- hosts: all
+  tasks: []
+
+- hosts: private-dns
+  become: yes
+  become_user: root
+  roles: [private-dns, development, general]
+
+- hosts: consul
+  become: yes
+  become_user: root
+  roles: [private-dns, development, general, consul]
+
+- hosts: private-dns
+  become: yes
+  become_user: root
+  roles: [consul, private-dns-consul-module]
+  vars:
+    consul_service_acls: {private-dns: {policy: write}}
+    consul_node_acls: {"{{ inventory_hostname }}": {policy: write}}
+
+- hosts: postgres
+  become: yes
+  become_user: root
+  roles: [private-dns, development, general, consul, postgres, postgres-consul-module]
+  vars:
+    postgres_users:
+      - {name: vault, db: postgres, password: password, role_attr_flags: "LOGIN,CREATEROLE"}
+      - {name: web, db: web, password: password}
+    postgres_authentication:
+      - {type: hostssl, db: postgres, user: vault, address: samenet, auth_method: md5}
+      - {type: hostssl, db: web, user: +web, address: samenet, auth_method: md5}
+    postgres_databases: [web]
+    consul_service_acls: {postgres: {policy: write}}
+    consul_node_acls: {"{{ inventory_hostname }}": {policy: write}}
+
+- hosts: vault
+  become: yes
+  become_user: root
+  roles: [private-dns, development, general, consul, vault]
+  vars:
+    vault_policies:
+      - name: pki-web-issue
+        policy:
+          path:
+            - pki/issue/web: {capabilities: [create, update]}
+      - name: database-web
+        policy:
+          path:
+            - database/creds/web: {capabilities: [read]}
+
+    vault_approle:
+      roles:
+        - name: web
+          bound_cidr_list: "{{ groups.web|map('extract', hostvars, 'ansible_eth1')|map(attribute='ipv4.address')|map('ipaddr', 'host')|join(',') }}"
+          secret_id_num_uses: "{{ groups.web|length }}"
+          policies: [default, pki-web-issue, database-web]
+
+    vault_pki:
+      ca:
+        common_name: Vault CA
+      roles:
+        - name: web
+          allowed_domains: "{{ groups.web|map_consul_node_san|union('web'|consul_service_san)|join(',') }}"
+          allow_bare_domains: true
+          server_flag: true
+
+    vault_database:
+      name: postgres
+      connection_url: postgresql://vault:password@postgres.service.consul:5432/postgres
+      roles:
+        - name: web
+          creation_statements: CREATE ROLE "{{ '{%raw%}' }}{%raw%}{{name}}{%endraw%}{{ '{%endraw%}' }}" WITH LOGIN ENCRYPTED PASSWORD '{{ "{%raw%}" }}{%raw%}{{password}}{%endraw%}{{ "{%endraw%}" }}' IN ROLE web VALID UNTIL '{{ "{%raw%}" }}{%raw%}{{expiration}}{%endraw%}{{ "{%endraw%}" }}';
+
+- name: Write Secrets
+  hosts: localhost
+  tasks:
+    - copy:
+        content: "{{ {'consul_acl_master_token': hostvars[groups.consul[0]].consul_acl_master_token, 'vault_key': hostvars[groups.vault[0]].vault_key, 'vault_token': hostvars[groups.vault[0]].vault_token}|to_yaml }}"
+        dest: "{{ playbook_dir }}/secrets.yml"
+
+- hosts: all
+  become: yes
+  become_user: root
+  tasks:
+    - name: Write Vault CA
+      copy:
+        content: "{{ hostvars[groups.vault[0]].vault_ca }}"
+        dest: /usr/share/pki/ca-trust-source/anchors/vault.crt
+    - name: Update CA Trust
+      command: /usr/bin/update-ca-trust
+
+- hosts: web
+  become: yes
+  become_user: root
+  roles: [private-dns, development, general, consul, consul-template, nginx, web]
+  vars:
+    consul_service_acls: {web: {policy: write}}
+    consul_node_acls: {"{{ inventory_hostname }}": {policy: write}}

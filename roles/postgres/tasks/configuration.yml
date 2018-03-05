@@ -1,0 +1,14 @@
+---
+
+- name: Template Configuration Files
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: postgres
+    mode: 0700
+  with_items:
+    - src: postgresql.conf
+      dest: "{{ postgres_data_dir }}/postgresql.conf"
+    - src: pg_hba.conf
+      dest: "{{ postgres_data_dir }}/pg_hba.conf"
+  notify: restart postgres

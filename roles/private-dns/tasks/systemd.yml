@@ -1,0 +1,7 @@
+---
+
+- name: Enable & Start Service
+  service:
+    name: unbound
+    enabled: yes
+    state: started

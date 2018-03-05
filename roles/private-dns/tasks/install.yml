@@ -1,0 +1,13 @@
+---
+
+- name: Install
+  yum:
+    name: unbound
+    state: present
+
+- name: Download Root Hints
+  get_url:
+    url: https://www.internic.net/domain/named.cache
+    dest: "{{ unbound_conf_dir }}/root.hints"
+    owner: unbound
+    mode: 0640

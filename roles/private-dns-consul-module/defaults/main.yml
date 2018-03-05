@@ -1,0 +1,4 @@
+---
+
+unbound_conf_dir: /etc/unbound
+consul_conf_dir: /usr/local/etc/consul.d

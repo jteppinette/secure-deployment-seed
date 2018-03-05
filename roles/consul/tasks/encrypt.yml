@@ -1,0 +1,56 @@
+---
+
+- name: Register Node ID
+  slurp:
+    src: "{{ consul_data_dir }}/node-id"
+  register: consul_node_id_task
+  failed_when: false
+- set_fact:
+    consul_node_id: "{{ consul_node_id_task.content|b64decode }}"
+  when: consul_node_id_task.content is defined
+- debug: var=consul_node_id
+
+- name: Register Existing Gossip Encryption Key
+  slurp:
+    src: "{{ consul_data_dir }}/serf/local.keyring"
+  register: consul_existing_gossip_encryption_key_task
+  failed_when: false
+  when: consul_node_id is defined
+- set_fact:
+    consul_existing_gossip_encryption_key: "{{ (consul_existing_gossip_encryption_key_task.content|b64decode|from_json)[0] }}"
+  when: not consul_existing_gossip_encryption_key_task|skipped and consul_existing_gossip_encryption_key_task.content is defined
+- debug: var=consul_existing_gossip_encryption_key
+
+- name: Register New Gossip Encryption Key (leader)
+  shell: "{{ consul_bin_dir }}/consul keygen"
+  register: consul_new_gossip_encryption_key_task
+  run_once: yes
+  when: consul_existing_gossip_encryption_key is not defined and consul_mode == "server"
+- set_fact:
+    consul_new_gossip_encryption_key: "{{ consul_new_gossip_encryption_key_task.stdout }}"
+  when: not consul_new_gossip_encryption_key_task|skipped and consul_new_gossip_encryption_key_task|success
+
+- name: Register New Gossip Encryption Key (non-leaders)
+  set_fact:
+    consul_new_gossip_encryption_key: "{{ hostvars[groups.consul[0]].consul_new_gossip_encryption_key }}"
+  when: consul_existing_gossip_encryption_key is not defined and consul_mode == "client" and hostvars[groups.consul[0]].consul_new_gossip_encryption_key is defined
+- set_fact:
+    consul_new_gossip_encryption_key: "{{ hostvars[groups.consul[0]].consul_existing_gossip_encryption_key }}"
+  when: consul_existing_gossip_encryption_key is not defined and consul_mode == "client" and hostvars[groups.consul[0]].consul_existing_gossip_encryption_key is defined
+
+- debug: var=consul_new_gossip_encryption_key
+
+- name: Copy Bootstrap Encrypt Configuration
+  copy:
+    content: "{{ {'encrypt': consul_new_gossip_encryption_key}|to_json }}"
+    dest: "{{ consul_conf_dir }}/encrypt.json"
+    owner: consul
+    mode: 0640
+  when: consul_new_gossip_encryption_key is defined
+  notify: restart consul
+- meta: flush_handlers
+
+- name: Remove Encrypt Configuration
+  file:
+    path: "{{ consul_conf_dir }}/encrypt.json"
+    state: absent

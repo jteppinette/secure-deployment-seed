@@ -1,0 +1,11 @@
+---
+
+# install directories
+consul_template_bin_dir: /usr/local/bin
+consul_template_conf_dir: /usr/local/etc/consul-template.d
+consul_template_tmp_dir: /tmp
+consul_template_ca_dir: /usr/share/pki/ca-trust-source/anchors
+
+# install version
+consul_template_version: 0.19.4
+consul_template_checksum: 5f70a7fb626ea8c332487c491924e0a2d594637de709e5b430ecffc83088abc0

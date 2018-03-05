@@ -1,0 +1,18 @@
+---
+
+- name: Clean Key
+  file:
+    path: "{{ unbound_conf_dir }}/root.key"
+    state: absent
+
+- name: Generate Key
+  command: /usr/sbin/unbound-anchor -a {{ unbound_conf_dir }}/root.key -r {{ unbound_conf_dir }}/root.hints -v
+  register: private_dns_generate_key_task
+  failed_when: not "does not exist" in private_dns_generate_key_task.stdout
+  notify: restart unbound
+
+- name: Update Key File Attributes
+  file:
+    path: "{{ unbound_conf_dir }}/root.key"
+    owner: unbound
+    mode: 0744

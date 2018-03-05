@@ -1,0 +1,49 @@
+---
+
+- name: Mount Database
+  uri:
+    url: http://localhost:8200/v1/sys/mounts/database
+    method: POST
+    headers:
+      X-Vault-Token: "{{ vault_token }}"
+    body:
+      type: database
+      config:
+        max_lease_ttl: "{{ vault_database.max_lease_ttl|default(vault_year) }}"
+    status_code: 204
+    body_format: json
+  run_once: yes
+  when: vault_mounts["database/"] is not defined
+
+- name: Configure Database
+  uri:
+    url: http://localhost:8200/v1/database/config/{{ vault_database.name }}
+    status_code: [200, 204]
+    method: POST
+    headers:
+      X-Vault-Token: "{{ vault_token }}"
+    body:
+      plugin_name: "postgresql-database-plugin"
+      allowed_roles: ["*"]
+      connection_url: "{{ vault_database.connection_url }}"
+      max_open_connections: "{{ vault_database.max_open_connection|default(5) }}"
+      max_connection_lifetime: "{{ vault_database.max_connection_lifetime|default('60s') }}"
+      verify_connection: "{{ vault_database.verify_connection|default(true) }}"
+    body_format: json
+  run_once: yes
+
+- name: Create/Update Roles
+  uri:
+    url: http://localhost:8200/v1/database/roles/{{ item.name }}
+    status_code: 204
+    method: POST
+    headers:
+      X-Vault-Token: "{{ vault_token }}"
+    body:
+      db_name: "{{ vault_database.name }}"
+      default_ttl: "{{ item.default_ttl|default('1h') }}"
+      max_ttl: "{{ item.max_ttl|default('24h') }}"
+      creation_statements: "{{ item.creation_statements }}"
+    body_format: json
+  run_once: yes
+  with_items: "{{ vault_database.roles }}"

@@ -1,0 +1,66 @@
+---
+
+- name: Install Packages
+  yum:
+    name: "{{ item }}"
+    state: present
+  with_items: [jq]
+
+- name: Create PKI Directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: 0600
+  with_items:
+    - "{{ nginx_pki_dir }}"
+    - "{{ nginx_pki_dir }}/private"
+
+- name: Create PKI Files
+  file:
+    path: "{{ item }}"
+    state: touch
+    mode: 0600
+  with_items:
+    - "{{ nginx_pki_dir }}/web.crt"
+    - "{{ nginx_pki_dir }}/private/web.key"
+
+- name: Template Consul Service Definition
+  template:
+    src: service.json
+    dest: "{{ consul_conf_dir }}/web.json"
+    mode: 0400
+    owner: consul
+  notify:
+    - reload consul
+
+- name: Generate Vault Token
+  uri:
+    url: https://active.vault.service.consul:8200/v1/auth/approle/login
+    method: POST
+    status_code: 200
+    body:
+      role_id: "{{ hostvars[groups.vault[0]].vault_approle_ids.web }}"
+      secret_id: "{{ hostvars[groups.vault[0]].vault_approle_secrets.web }}"
+    body_format: json
+    return_content: yes
+  register: web_consul_template_vault_token_task
+- set_fact:
+    web_consul_template_vault_token: "{{ web_consul_template_vault_token_task.json.auth.client_token }}"
+
+- name: Template Files
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    mode: "{{ item.mode }}"
+  with_items:
+    - src: nginx.conf
+      dest: "{{ nginx_conf_dir }}/"
+      mode: "0640"
+    - src: process-nginx-ssl.sh
+      dest: "{{ web_bin_dir }}/"
+      mode: "0500"
+    - src: consul-template.hcl
+      dest: "{{ consul_template_conf_dir }}/web.hcl"
+      mode: "0400"
+  notify:
+    - restart consul template

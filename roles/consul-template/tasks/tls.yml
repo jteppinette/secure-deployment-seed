@@ -1,0 +1,10 @@
+---
+
+- name: Copy Root CA Certificate
+  copy:
+    src: pki/ca/root.crt
+    dest: "{{ consul_template_ca_dir }}/"
+    mode: 0644
+  notify:
+    - update ca trust
+    - restart consul template

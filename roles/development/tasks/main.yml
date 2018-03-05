@@ -1,0 +1,14 @@
+- name: Install Packages
+  yum:
+    name: "{{ item }}"
+    state: present
+  with_items: [vim, epel-release, tcpdump, bind-utils]
+
+- name: Copy Dot Files
+  copy:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    mode: 0644
+  with_items:
+    - src: ~/.vimrc
+      dest: /etc/vimrc

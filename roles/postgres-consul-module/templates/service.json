@@ -1,0 +1,15 @@
+{
+  "service": {
+    "name": "postgres",
+    "port": 5432,
+    "checks": [
+      {
+        "id": "postgres_tcp",
+        "name": "Postgres TCP Check",
+        "tcp": "127.0.0.1:5432",
+        "interval": "10s",
+        "timeout": "1s"
+      }
+    ]
+  }
+}

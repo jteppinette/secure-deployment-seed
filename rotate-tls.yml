@@ -1,0 +1,87 @@
+---
+
+- import_playbook: generate-pki.yml force_certificates=yes
+
+- hosts: all
+  become: yes
+  become_user: root
+  vars:
+    pki_dir: /usr/local/etc/pki/consul
+  serial: 1
+  tasks:
+
+    - name: Copy Certificate and Key Files
+      copy:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        owner: consul
+        mode: 0400
+      with_items:
+        - src: pki/consul/{{ inventory_hostname }}.crt
+          dest: "{{ pki_dir }}/"
+        - src: pki/consul/{{ inventory_hostname }}.key
+          dest: "{{ pki_dir }}/private/"
+
+    - name: restart consul
+      service:
+        name: consul
+        state: restarted
+
+    - pause:
+        seconds: 5
+
+- hosts: vault
+  become: yes
+  become_user: root
+  vars:
+    pki_dir: /usr/local/etc/pki/vault
+  serial: 1
+  tasks:
+
+    - name: Copy Certificate and Key Files
+      copy:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        owner: vault
+        mode: 0400
+      with_items:
+        - src: pki/vault/{{ inventory_hostname }}.crt
+          dest: "{{ pki_dir }}/"
+        - src: pki/vault/{{ inventory_hostname }}.key
+          dest: "{{ pki_dir }}/private/"
+
+    - name: reload vault
+      service:
+        name: vault
+        state: reloaded
+
+    - pause:
+        seconds: 5
+
+- hosts: postgres
+  become: yes
+  become_user: root
+  vars:
+    pki_dir: /usr/local/etc/pki/postgres
+  serial: 1
+  tasks:
+
+    - name: Copy Certificate and Key Files
+      copy:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        owner: postgres
+        mode: 0400
+      with_items:
+        - src: pki/postgres/{{ inventory_hostname }}.crt
+          dest: "{{ pki_dir }}/"
+        - src: pki/postgres/{{ inventory_hostname }}.key
+          dest: "{{ pki_dir }}/private/"
+
+    - name: restart postgres
+      service:
+        name: postgresql-9.6
+        state: restarted
+
+    - pause:
+        seconds: 5

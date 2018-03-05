@@ -1,0 +1,92 @@
+---
+
+- hosts: localhost
+  vars:
+    force_ca: false
+    force_certificates: "{{ force_ca }}"
+    postgres_servers: "{{ groups.postgres }}"
+    vault_servers: "{{ groups.vault }}"
+    consul_servers: "{{ groups.consul }}"
+    consul_clients: "{{ groups.all|difference(groups.consul) }}"
+    days: 1
+    consul_datacenter: SFO1
+  tasks:
+
+    - name: Generate PKI Directories
+      file:
+        path: "{{ item }}"
+        state: directory
+      with_items:
+        - pki/postgres
+        - pki/consul
+        - pki/vault
+        - pki/ca
+
+    - name: Template Postgres Server OpenSSL Configurations
+      template:
+        src: pki/templates/postgres.conf
+        dest: pki/postgres/{{ item }}.conf
+        mode: 0600
+      with_items: "{{ postgres_servers }}"
+
+    - name: Template Vault Server OpenSSL Configurations
+      template:
+        src: pki/templates/vault-server.conf
+        dest: pki/vault/{{ item }}.conf
+        mode: 0600
+      with_items: "{{ vault_servers }}"
+
+    - name: Template Consul Server OpenSSL Configurations
+      template:
+        src: pki/templates/consul-server.conf
+        dest: pki/consul/{{ item }}.conf
+        mode: 0600
+      with_items: "{{ consul_servers }}"
+
+    - name: Template Consul Client OpenSSL Configurations
+      template:
+        src: pki/templates/consul-client.conf
+        dest: pki/consul/{{ item }}.conf
+        mode: 0600
+      with_items: "{{ consul_clients }}"
+
+    - name: Template CA OpenSSL Configuration
+      template:
+        src: pki/templates/ca.conf
+        dest: pki/ca/ca.conf
+        mode: 0600
+
+    - name: Register CA Exists
+      stat:
+        path: pki/ca/root.crt
+      register: ca_exists_task
+    - set_fact:
+        ca_exists: "{{ ca_exists_task.stat.exists }}"
+
+    - name: Generate Root Certificate & Private Key
+      command: /usr/bin/openssl req -x509 -config pki/ca/ca.conf -batch -days {{ days }} -newkey rsa -nodes -keyout pki/ca/root.key -out pki/ca/root.crt
+      when: not ca_exists or force_ca
+
+    - name: Generate Consul Certificates
+      include_tasks: generate-self-signed-certificate.yml
+      vars:
+        dir: pki/consul
+        ca_dir: pki/ca
+        name: "{{ item }}"
+      with_items: "{{ consul_servers|union(consul_clients) }}"
+
+    - name: Generate Postgres Certificates
+      include_tasks: generate-self-signed-certificate.yml
+      vars:
+        dir: pki/postgres
+        ca_dir: pki/ca
+        name: "{{ item }}"
+      with_items: "{{ postgres_servers }}"
+
+    - name: Generate Vault Certificates
+      include_tasks: generate-self-signed-certificate.yml
+      vars:
+        dir: pki/vault
+        ca_dir: pki/ca
+        name: "{{ item }}"
+      with_items: "{{ vault_servers }}"

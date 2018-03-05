@@ -1,0 +1,7 @@
+- name: Template General Configuration File
+  template:
+    src: vault.hcl
+    dest: "{{ vault_conf_file }}"
+    owner: vault
+    mode: 0640
+  notify: restart vault

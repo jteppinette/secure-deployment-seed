@@ -1,0 +1,9 @@
+---
+
+- name: restart postgres
+  service:
+    name: postgresql-{{ postgres_version }}
+    state: restarted
+
+- name: update ca trust
+  command: /usr/bin/update-ca-trust

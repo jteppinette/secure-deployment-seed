@@ -1,0 +1,14 @@
+---
+
+- name: Create/Update Policies
+  uri:
+    url: http://localhost:8200/v1/sys/policy/{{ item.name }}
+    method: PUT
+    headers:
+      X-Vault-Token: "{{ vault_token }}"
+    body:
+      policy: "{{ item.policy|to_json }}"
+    body_format: json
+    status_code: 204
+  with_items: "{{ vault_policies }}"
+  run_once: yes

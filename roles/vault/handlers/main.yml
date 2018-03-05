@@ -1,0 +1,9 @@
+---
+
+- name: restart vault
+  service:
+    name: vault
+    state: restarted
+
+- name: update ca trust
+  command: /usr/bin/update-ca-trust

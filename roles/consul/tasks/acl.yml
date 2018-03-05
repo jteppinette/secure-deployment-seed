@@ -1,0 +1,71 @@
+---
+
+- pause:
+    seconds: 2
+  when: consul_acl_master_token is not defined and consul_mode == "server"
+
+- name: Generate ACL Master Token
+  uri:
+    url: http://localhost:8500/v1/acl/bootstrap
+    method: PUT
+    return_content: yes
+    status_code: 200
+  register: consul_acl_master_token_task
+  run_once: yes
+  when: consul_acl_master_token is not defined and consul_mode == "server"
+- set_fact:
+    consul_acl_master_token: "{{ consul_acl_master_token_task.json.ID }}"
+  when: not consul_acl_master_token_task|skipped and not consul_acl_master_token_task|failed
+- debug: var=consul_acl_master_token
+
+- name: Update ACL Anonymous Token
+  uri:
+    url: http://localhost:8500/v1/acl/update
+    method: PUT
+    status_code: 200
+    headers:
+      X-Consul-Token: "{{ hostvars[groups.consul[0]].consul_acl_master_token }}"
+    body:
+      ID: anonymous
+      Type: client
+      Rules: "{{ {'node': {'': {'policy': 'read'}}, 'service': {'': {'policy': 'read'}}}|to_json }}"
+    body_format: json
+  register: consul_acl_master_token_task
+  run_once: yes
+  when: consul_mode == "server"
+
+- name: Generate ACL Agent Token
+  uri:
+    url: http://localhost:8500/v1/acl/create
+    method: PUT
+    headers:
+      X-Consul-Token: "{{ hostvars[groups.consul[0]].consul_acl_master_token }}"
+    body:
+      Name: "{{ inventory_hostname }} - agent token"
+      Type: client
+      Rules: "{{ {'node': {inventory_hostname: {'policy': 'write'}, '': {'policy': 'read'}}, 'service': {'': {'policy': 'read'}}|combine(consul_service_acls|default({}))}|to_json }}"
+    body_format: json
+    status_code: 200
+    return_content: yes
+  register: consul_acl_agent_token_task
+- set_fact:
+    consul_acl_agent_token: "{{ consul_acl_agent_token_task.json.ID }}"
+- debug: var=consul_acl_agent_token
+
+- name: Set ACL Agent Token
+  uri:
+    url: http://localhost:8500/v1/agent/token/acl_token
+    method: PUT
+    headers:
+      X-Consul-Token: "{{ hostvars[groups.consul[0]].consul_acl_master_token }}"
+    body:
+      Token: "{{ consul_acl_agent_token }}"
+    body_format: json
+    status_code: 200
+
+- name: Copy ACL Agent Token
+  copy:
+    content: "{{ {'acl_token': consul_acl_agent_token}|to_json }}"
+    dest: "{{ consul_conf_dir }}/acl.json"
+    owner: consul
+    mode: 0640

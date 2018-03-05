@@ -1,0 +1,14 @@
+{
+  "datacenter": "{{ consul_datacenter }}",
+  "acl_datacenter": "{{ consul_datacenter }}",
+  "acl_default_policy": "deny",
+  "data_dir": "{{ consul_data_dir }}",
+  "bind_addr": "{{ ansible_eth1.ipv4.address }}",
+  "retry_join": ["{{ hostvars[groups.consul[0]].ansible_eth1.ipv4.address }}"],
+  "ca_file": "{{ consul_ca_dir }}/root.crt",
+  "cert_file": "{{ consul_pki_dir }}/{{ inventory_hostname }}.crt",
+  "key_file": "{{ consul_pki_dir }}/private/{{ inventory_hostname }}.key",
+  "verify_outgoing": true,
+  "verify_incoming": true,
+  "verify_server_hostname": true
+}

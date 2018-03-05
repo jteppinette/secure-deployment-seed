@@ -1,0 +1,6 @@
+---
+
+- name: Add User
+  user:
+    name: consul
+    system: yes

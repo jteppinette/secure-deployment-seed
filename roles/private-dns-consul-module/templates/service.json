@@ -1,0 +1,15 @@
+{
+  "service": {
+    "name": "private-dns",
+    "port": 53,
+    "checks": [
+      {
+        "id": "dns_tcp",
+        "name": "DNS TCP Check",
+        "tcp": "127.0.0.1:53",
+        "interval": "10s",
+        "timeout": "1s"
+      }
+    ]
+  }
+}

@@ -1,0 +1,14 @@
+[private-dns]
+private-dns-one ansible_port=2222
+
+[consul]
+consul-one ansible_port=2200
+
+[vault]
+vault-one ansible_port=2201
+
+[web]
+web-one ansible_port=2202
+
+[postgres]
+postgres-one ansible_port=2203

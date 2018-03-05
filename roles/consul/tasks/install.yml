@@ -1,0 +1,36 @@
+---
+
+- name: Install Packages
+  yum:
+    name: "{{ item }}"
+    state: present
+  with_items: [unzip]
+
+- name: Register Consul Binary Exists
+  stat:
+    path: "{{ consul_bin_dir }}/consul"
+  register: consul_binary_exists_task
+- set_fact:
+    consul_binary_exists: "{{ consul_binary_exists_task.stat.exists }}"
+
+- name: Download Consul
+  get_url:
+    url: https://releases.hashicorp.com/consul/{{ consul_version }}/consul_{{ consul_version }}_linux_amd64.zip
+    dest: "{{ consul_tmp_dir }}/consul.zip"
+    checksum: sha256:{{ consul_checksum }}
+    mode: 0640
+  when: not consul_binary_exists
+
+- name: Unzip Consul
+  unarchive:
+    src: "{{ consul_tmp_dir }}/consul.zip"
+    dest: "{{ consul_bin_dir }}"
+    remote_src: yes
+    mode: 500
+    owner: consul
+  when: not consul_binary_exists
+
+- name: Cleanup Consul Tmp
+  file:
+    path: "{{ consul_tmp_dir }}/consul.zip"
+    state: absent

@@ -1,0 +1,7 @@
+---
+
+nginx_pki_dir: /etc/pki/nginx
+nginx_conf_dir: /etc/nginx
+web_bin_dir: /usr/local/bin
+consul_template_conf_dir: /usr/local/etc/consul-template.d
+consul_conf_dir: /usr/local/etc/consul.d

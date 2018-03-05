@@ -1,0 +1,9 @@
+---
+
+- import_tasks: user.yml
+- import_tasks: install.yml
+- import_tasks: systemd.yml
+- import_tasks: configuration.yml
+- import_tasks: tls.yml
+- import_tasks: encrypt.yml
+- import_tasks: acl.yml

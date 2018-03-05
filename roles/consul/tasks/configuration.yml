@@ -1,0 +1,23 @@
+- name: Create Consul Configuration Directory
+  file:
+    path: "{{ consul_conf_dir }}"
+    state: directory
+    owner: consul
+    mode: 0750
+
+- name: Template General Configuration File
+  template:
+    src: default.json
+    dest: "{{ consul_conf_dir }}/"
+    owner: consul
+    mode: 0640
+  notify: restart consul
+
+- name: Template Server Configuration File
+  template:
+    src: server.json
+    dest: "{{ consul_conf_dir }}/"
+    owner: consul
+    mode: 0640
+  when: consul_mode == "server"
+  notify: restart consul

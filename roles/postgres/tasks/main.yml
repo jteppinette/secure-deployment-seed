@@ -1,0 +1,10 @@
+---
+
+- import_tasks: install.yml
+- import_tasks: configuration.yml
+- import_tasks: oidentd.yml
+- import_tasks: tls.yml
+- import_tasks: ansible.yml
+- import_tasks: systemd.yml
+- import_tasks: db.yml
+- import_tasks: user.yml

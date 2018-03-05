@@ -1,0 +1,8 @@
+---
+
+- name: Create PKI Dir
+  file:
+    path: /usr/local/etc/pki
+    owner: root
+    mode: 0755
+    state: directory

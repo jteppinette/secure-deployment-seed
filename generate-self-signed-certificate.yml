@@ -1,0 +1,23 @@
+---
+
+- name: Register Existing CSR
+  stat:
+    path: "{{ dir }}/{{ name }}.csr"
+  register: existing_csr_task
+- set_fact:
+    csr_exists: "{{ existing_csr_task.stat.exists }}"
+
+- name: Generate Certificate Signing Request
+  command: /usr/bin/openssl req -new -config {{ dir }}/{{ name }}.conf -batch -newkey rsa -nodes -keyout {{ dir }}/{{ name }}.key -out {{ dir }}/{{ name }}.csr
+  when: not csr_exists or force_certificates
+
+- name: Register Existing Certificate
+  stat:
+    path: "{{ dir }}/{{ name }}.crt"
+  register: existing_crt_task
+- set_fact:
+    crt_exists: "{{ existing_crt_task.stat.exists }}"
+
+- name: Generate Certificate
+  command: /usr/bin/openssl x509 -req -in {{ dir }}/{{ name }}.csr -days {{ days }} -sha256 -CA {{ ca_dir }}/root.crt -CAkey {{ ca_dir }}/root.key -CAcreateserial -extfile {{ dir }}/{{ name }}.conf -extensions x509_ext -out {{ dir }}/{{ name }}.crt
+  when: not crt_exists or force_certificates

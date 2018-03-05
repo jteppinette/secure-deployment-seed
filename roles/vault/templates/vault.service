@@ -1,0 +1,14 @@
+[Unit]
+Description=vault
+Requires=network-online.target
+After=network-online.target
+
+[Service]
+User=vault
+Restart=on-failure
+ExecStart=/usr/local/bin/vault server -config={{ vault_conf_file }}
+ExecReload=/bin/kill -HUP $MAINPID
+KillSignal=SIGINT
+
+[Install]
+WantedBy=multi-user.target

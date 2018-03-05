@@ -1,0 +1,15 @@
+---
+
+- name: Template Configuration
+  template:
+    src: unbound.conf
+    dest: "{{ unbound_conf_dir }}/unbound.conf"
+    mode: 0640
+  notify: restart unbound
+
+- name: Create Log Directory
+  file:
+    path: "{{ unbound_log_dir }}"
+    state: directory
+    owner: unbound
+    mode: 0740

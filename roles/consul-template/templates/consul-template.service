@@ -1,0 +1,13 @@
+[Unit]
+Description=consul template
+Requires=network-online.target
+After=consul.service
+
+[Service]
+Restart=on-failure
+ExecStart={{ consul_template_bin_dir }}/consul-template -config {{ consul_template_conf_dir }}
+ExecReload=/bin/kill -HUP $MAINPID
+KillSignal=SIGINT
+
+[Install]
+WantedBy=multi-user.target

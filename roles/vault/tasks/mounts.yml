@@ -1,0 +1,13 @@
+---
+
+- name: Register Mounts
+  uri:
+    url: http://localhost:8200/v1/sys/mounts
+    headers:
+      X-Vault-Token: "{{ vault_token }}"
+    return_content: yes
+    status_code: 200
+  register: vault_mounts_task
+- set_fact:
+    vault_mounts: "{{ vault_mounts_task.json }}"
+  when: vault_mounts_task|success

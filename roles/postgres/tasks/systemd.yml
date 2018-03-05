@@ -1,0 +1,9 @@
+---
+
+- meta: flush_handlers
+
+- name: Start & Enable Service
+  service:
+    name: postgresql-{{ postgres_version }}
+    state: started
+    enabled: yes

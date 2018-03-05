@@ -1,0 +1,30 @@
+---
+
+- name: Create PKI Directory
+  file:
+    path: "{{ postgres_pki_dir }}/private"
+    state: directory
+    owner: postgres
+    mode: 0700
+
+- name: Copy Certificate and Key Files
+  copy:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: postgres
+    mode: 0400
+  with_items:
+    - src: pki/postgres/{{ inventory_hostname }}.crt
+      dest: "{{ postgres_pki_dir }}/"
+    - src: pki/postgres/{{ inventory_hostname }}.key
+      dest: "{{ postgres_pki_dir }}/private/"
+  notify: restart postgres
+
+- name: Copy Root CA Certificate
+  copy:
+    src: pki/ca/root.crt
+    dest: "{{ postgres_ca_dir }}/"
+    mode: 0644
+  notify:
+    - update ca trust
+    - restart postgres

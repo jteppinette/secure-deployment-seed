@@ -1,0 +1,11 @@
+---
+
+- name: Template SystemD Unit File
+  template:
+    src: consul-template.service
+    dest: /lib/systemd/system/consul-template.service
+
+- name: Enable Consul Template
+  service:
+    name: consul-template
+    enabled: yes

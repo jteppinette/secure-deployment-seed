@@ -1,0 +1,9 @@
+*.retry
+*.pyc
+.vagrant
+secrets.yml
+
+pki/vault
+pki/consul
+pki/ca
+pki/postgres

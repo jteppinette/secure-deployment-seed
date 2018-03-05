@@ -1,0 +1,30 @@
+---
+
+- name: Create PKI Directory
+  file:
+    path: "{{ vault_pki_dir }}/private"
+    state: directory
+    owner: vault
+    mode: 0700
+
+- name: Copy Certificate and Key Files
+  copy:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: vault
+    mode: 0400
+  with_items:
+    - src: pki/vault/{{ inventory_hostname }}.crt
+      dest: "{{ vault_pki_dir }}/"
+    - src: pki/vault/{{ inventory_hostname }}.key
+      dest: "{{ vault_pki_dir }}/private/"
+  notify: restart vault
+
+- name: Copy Root CA Certificate
+  copy:
+    src: pki/ca/root.crt
+    dest: "{{ vault_ca_dir }}/"
+    mode: 0644
+  notify:
+    - update ca trust
+    - restart vault

@@ -1,0 +1,3 @@
+---
+
+consul_mode: "{{ (inventory_hostname in groups.consul)|ternary('server', 'client') }}"

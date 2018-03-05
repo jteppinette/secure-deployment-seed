@@ -1,0 +1,61 @@
+---
+
+- hosts: consul
+  become: yes
+  become_user: consul
+  vars:
+    consul_data_dir: /tmp/consul
+    consul_bin_dir: /usr/local/bin
+  tasks:
+
+    - name: Register Existing Gossip Encryption Key
+      slurp:
+        src: "{{ consul_data_dir }}/serf/local.keyring"
+      register: consul_existing_gossip_encryption_key_task
+      failed_when: false
+      run_once: yes
+    - set_fact:
+        consul_existing_gossip_encryption_key: "{{ (consul_existing_gossip_encryption_key_task.content|b64decode|from_json)[0] }}"
+      when: not consul_existing_gossip_encryption_key_task|skipped and consul_existing_gossip_encryption_key_task.content is defined
+    - debug: var=consul_existing_gossip_encryption_key
+
+    - name: Register New Gossip Encryption Key
+      shell: "{{ consul_bin_dir }}/consul keygen"
+      register: consul_new_gossip_encryption_key_task
+      run_once: yes
+    - set_fact:
+        consul_new_gossip_encryption_key: "{{ consul_new_gossip_encryption_key_task.stdout }}"
+      when: not consul_new_gossip_encryption_key_task|skipped and consul_new_gossip_encryption_key_task|success
+    - debug: var=consul_new_gossip_encryption_key
+
+    - name: Install New Gossip Encryption Key
+      shell: "{{ consul_bin_dir }}/consul keyring -install={{ consul_new_gossip_encryption_key }}"
+      run_once: yes
+
+    - name: Use New Gossip Encryption Key
+      shell: "{{ consul_bin_dir }}/consul keyring -use={{ consul_new_gossip_encryption_key }}"
+      run_once: yes
+
+    - name: Remove Existing Gossip Encryption Key
+      shell: "{{ consul_bin_dir }}/consul keyring -remove={{ consul_existing_gossip_encryption_key }}"
+      run_once: yes
+
+- hosts: all
+  become: yes
+  become_user: consul
+  vars:
+    consul_data_dir: /tmp/consul
+  tasks:
+
+    - name: Verify Rotated Gossip Encryption Key
+      slurp:
+        src: "{{ consul_data_dir }}/serf/local.keyring"
+      register: consul_rotated_gossip_encryption_key_task
+      failed_when: false
+    - set_fact:
+        consul_rotated_gossip_encryption_key: "{{ (consul_rotated_gossip_encryption_key_task.content|b64decode|from_json)[0] }}"
+      when: not consul_rotated_gossip_encryption_key_task|skipped and consul_rotated_gossip_encryption_key_task.content is defined
+    - debug: var=consul_rotated_gossip_encryption_key
+    - fail:
+        msg: incorrect encryption key
+      when: consul_rotated_gossip_encryption_key != hostvars[groups.consul[0]].consul_new_gossip_encryption_key

@@ -1,0 +1,16 @@
+---
+
+# install directories
+vault_tmp_dir: /tmp
+vault_bin_dir: /usr/local/bin
+vault_conf_file: /usr/local/etc/vault.hcl
+vault_pki_dir: /usr/local/etc/pki/vault
+vault_ca_dir: /usr/share/pki/ca-trust-source/anchors
+
+# install version
+vault_version: 0.9.0
+vault_checksum: 801ce0ceaab4d2e59dbb35ea5191cfe8e6f36bb91500e86bec2d154172de59a4
+
+# mount defaults
+vault_key_bits: 4096
+vault_year: 8760h

@@ -1,0 +1,11 @@
+{
+  "server": true,
+  "ui": true,
+  "bootstrap_expect": {{ groups.consul|length }},
+  "addresses": {
+    "https": "{{ ansible_eth1.ipv4.address }}"
+  },
+  "ports": {
+    "https": 8501
+  }
+}

@@ -1,0 +1,36 @@
+---
+
+- name: Install Packages
+  yum:
+    name: "{{ item }}"
+    state: present
+  with_items: [unzip]
+
+- name: Register Vault Binary Exists
+  stat:
+    path: "{{ vault_bin_dir }}/vault"
+  register: vault_binary_exists_task
+- set_fact:
+    vault_binary_exists: "{{ vault_binary_exists_task.stat.exists }}"
+
+- name: Download Vault
+  get_url:
+    url: https://releases.hashicorp.com/vault/{{ vault_version }}/vault_{{ vault_version }}_linux_amd64.zip
+    dest: "{{ vault_tmp_dir }}/vault.zip"
+    checksum: sha256:{{ vault_checksum }}
+    mode: 0640
+  when: not vault_binary_exists
+
+- name: Unzip Vault
+  unarchive:
+    src: "{{ vault_tmp_dir }}/vault.zip"
+    dest: "{{ vault_bin_dir }}"
+    remote_src: yes
+    mode: 500
+    owner: vault
+  when: not vault_binary_exists
+
+- name: Cleanup Vault Tmp
+  file:
+    path: "{{ vault_tmp_dir }}/vault.zip"
+    state: absent

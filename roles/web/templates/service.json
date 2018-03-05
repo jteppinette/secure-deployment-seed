@@ -1,0 +1,15 @@
+{
+  "service": {
+    "name": "web",
+    "port": 443,
+    "checks": [
+      {
+        "id": "nginx_status",
+        "name": "NGINX Status Check",
+        "http": "https://localhost:443/nginx_status",
+        "interval": "10s",
+        "timeout": "5s"
+      }
+    ]
+  }
+}
